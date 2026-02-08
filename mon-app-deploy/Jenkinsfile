@@ -1,57 +1,57 @@
 pipeline {
   agent any
- 
+
   environment {
-    OCP_API = "https://api.TON-CLUSTER:6443"
+    // ⚠️ Remplace par tes vraies valeurs
+    OCP_API   = "https://api.rm3.7wse.p1.openshiftapps.com:6443"
+    OCP_TOKEN = "sha256~b7DX0ijQlS0swgOaK3p51JTeate2KqwQhWVi4KPC1Xs"
   }
- 
+
   parameters {
     string(name: 'NAMESPACE', defaultValue: 'mon-namespace', description: 'OpenShift project')
     string(name: 'RELEASE', defaultValue: 'monrelease', description: 'Helm release name')
     string(name: 'CHART_DIR', defaultValue: 'charts/mon-app', description: 'Chemin du chart')
     string(name: 'VALUES_FILE', defaultValue: 'charts/mon-app/values.yaml', description: 'Fichier values utilisé')
   }
- 
+
   stages {
     stage('Checkout') {
       steps { checkout scm }
     }
- 
+
     stage('Login OpenShift') {
       steps {
-        withCredentials([string(credentialsId: 'OCP_TOKEN', variable: 'TOKEN')]) {
-          sh """
-            set -e
-            oc login --token="$TOKEN" --server="${OCP_API}" --insecure-skip-tls-verify=true
-            oc project ${params.NAMESPACE} || oc new-project ${params.NAMESPACE}
-          """
-        }
+        sh '''
+          set -e
+          oc login --token="$OCP_TOKEN" --server="$OCP_API" --insecure-skip-tls-verify=true
+          oc project "$NAMESPACE" || oc new-project "$NAMESPACE"
+        '''
       }
     }
- 
+
     stage('Deploy Helm') {
       steps {
-        sh """
+        sh '''
           set -e
-          helm lint ${params.CHART_DIR}
-          helm upgrade --install ${params.RELEASE} ${params.CHART_DIR} \
-            -n ${params.NAMESPACE} \
-            -f ${params.VALUES_FILE} \
+          helm lint "$CHART_DIR"
+          helm upgrade --install "$RELEASE" "$CHART_DIR" \
+            -n "$NAMESPACE" \
+            -f "$VALUES_FILE" \
             --atomic --timeout 5m
- 
-          oc get all -n ${params.NAMESPACE}
-          oc get route -n ${params.NAMESPACE} || true
-        """
+
+          oc get all -n "$NAMESPACE"
+          oc get route -n "$NAMESPACE" || true
+        '''
       }
     }
- 
+
     stage('Verify rollout') {
       steps {
-        sh """
+        sh '''
           set -e
-          oc rollout status deploy/${params.RELEASE}-backend -n ${params.NAMESPACE} --timeout=300s
-          oc rollout status deploy/${params.RELEASE}-frontend -n ${params.NAMESPACE} --timeout=300s
-        """
+          oc rollout status deploy/"$RELEASE"-backend -n "$NAMESPACE" --timeout=300s
+          oc rollout status deploy/"$RELEASE"-frontend -n "$NAMESPACE" --timeout=300s
+        '''
       }
     }
   }
