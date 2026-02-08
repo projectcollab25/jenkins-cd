@@ -1,0 +1,58 @@
+pipeline {
+  agent any
+ 
+  environment {
+    OCP_API = "https://api.TON-CLUSTER:6443"
+  }
+ 
+  parameters {
+    string(name: 'NAMESPACE', defaultValue: 'mon-namespace', description: 'OpenShift project')
+    string(name: 'RELEASE', defaultValue: 'monrelease', description: 'Helm release name')
+    string(name: 'CHART_DIR', defaultValue: 'charts/mon-app', description: 'Chemin du chart')
+    string(name: 'VALUES_FILE', defaultValue: 'charts/mon-app/values.yaml', description: 'Fichier values utilisé')
+  }
+ 
+  stages {
+    stage('Checkout') {
+      steps { checkout scm }
+    }
+ 
+    stage('Login OpenShift') {
+      steps {
+        withCredentials([string(credentialsId: 'OCP_TOKEN', variable: 'TOKEN')]) {
+          sh """
+            set -e
+            oc login --token="$TOKEN" --server="${OCP_API}" --insecure-skip-tls-verify=true
+            oc project ${params.NAMESPACE} || oc new-project ${params.NAMESPACE}
+          """
+        }
+      }
+    }
+ 
+    stage('Deploy Helm') {
+      steps {
+        sh """
+          set -e
+          helm lint ${params.CHART_DIR}
+          helm upgrade --install ${params.RELEASE} ${params.CHART_DIR} \
+            -n ${params.NAMESPACE} \
+            -f ${params.VALUES_FILE} \
+            --atomic --timeout 5m
+ 
+          oc get all -n ${params.NAMESPACE}
+          oc get route -n ${params.NAMESPACE} || true
+        """
+      }
+    }
+ 
+    stage('Verify rollout') {
+      steps {
+        sh """
+          set -e
+          oc rollout status deploy/${params.RELEASE}-backend -n ${params.NAMESPACE} --timeout=300s
+          oc rollout status deploy/${params.RELEASE}-frontend -n ${params.NAMESPACE} --timeout=300s
+        """
+      }
+    }
+  }
+}
