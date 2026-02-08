@@ -1,0 +1,21 @@
+{{- if .Values.frontend.route.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ printf "%s-frontend-route" .Release.Name }}
+  labels:
+    app: {{ printf "%s-frontend" .Release.Name }}
+spec:
+  {{- if .Values.frontend.route.host }}
+  host: {{ .Values.frontend.route.host | quote }}
+  {{- end }}
+  to:
+    kind: Service
+    name: {{ printf "%s-frontend-svc" .Release.Name }}
+  port:
+    targetPort: 8080
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+{{- end }}

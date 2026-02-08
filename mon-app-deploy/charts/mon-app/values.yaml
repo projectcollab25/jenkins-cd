@@ -1,0 +1,31 @@
+replicaCount: 1
+
+imagePullSecret:
+  name: github-org-pro25
+  create: true
+
+backend:
+  image:
+    repository: ghcr.io/projectcollab25/backend_actions
+    tag: "1.10"
+  servicePort: 3000
+  env:
+    IMAGE_VERSION: "ghcr.io/projectcollab25/backend_actions:1.10"
+    FRONTEND_IMAGE_VERSION: "ghcr.io/projectcollab25/frontend_actions:v1.0.6"
+
+frontend:
+  image:
+    repository: ghcr.io/projectcollab25/frontend_actions
+    tag: "v1.0.6"
+  containerPort: 8080
+  env:
+    VITE_API_PROXY: "http://reservation-backend-svc:3000"
+    IMAGE_VERSION: "ghcr.io/projectcollab25/frontend_actions:v1.0.6"
+  route:
+    enabled: true
+    # Optional host for the OpenShift Route. If empty, OpenShift will assign a host.
+    host: ""
+
+docker:
+  username: Mohamedbg23
+  email: mohamed.boughariou@viacesi.fr

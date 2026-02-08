@@ -1,0 +1,29 @@
+{{- $name := printf "%s-frontend" .Release.Name -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    app: {{ $name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $name }}
+    spec:
+      imagePullSecrets:
+        - name: {{ .Values.imagePullSecret.name }}
+      containers:
+        - name: frontend
+          image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.frontend.containerPort }}
+          env:
+            - name: VITE_API_PROXY
+              value: "{{ .Values.frontend.env.VITE_API_PROXY }}"
+            - name: IMAGE_VERSION
+              value: "{{ .Values.frontend.env.IMAGE_VERSION }}"
